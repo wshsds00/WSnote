@@ -25,3 +25,14 @@ def test_bm25_empty_corpus():
     idx = BM25Index()
     idx.build([])
     assert idx.search("任意", k=1) == []
+
+
+def test_bm25_common_term_not_dropped():
+    idx = BM25Index()
+    chunks = [
+        Chunk("c1", "n1", "", "的 的内容", 0),
+        Chunk("c2", "n2", "", "的 别的", 0),
+    ]
+    idx.build(chunks)
+    hits = idx.search("的", k=2)
+    assert len(hits) == 2  # 常见词 df=N，RSJ +1 idf 恒正，不应被 >0 过滤全部丢弃
