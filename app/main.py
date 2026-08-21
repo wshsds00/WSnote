@@ -11,6 +11,7 @@ from app.ingest.vector_store import VectorStore
 from app.notes.store import NoteStore
 from app.retrieval.bm25 import BM25Index
 from app.retrieval.hybrid import HybridSearcher
+from app.retrieval.rerank import Reranker
 
 
 def create_app(config: Config | None = None, note_store=None, db=None,
@@ -21,15 +22,15 @@ def create_app(config: Config | None = None, note_store=None, db=None,
     database.init()
     embedder = build_embedder(config)
     vs = VectorStore(config, database, embedder)
-    if vs.config.faiss_path.exists():
-        vs.load()
-    else:
-        vs.reset()
+    vs.load_or_reset()
     ing = ingestor or Ingestor(config, ns, database, embedder, vs)
+    if len(database.all_chunks()) > 0 and ing.vs.count() == 0:
+        ing.rebuild_all()
     bm25 = BM25Index()
     bm25.build(database.all_chunks())
     llm = llm if llm is not None else build_llm(config)
-    searcher = HybridSearcher(config, database, ing.vs, ing.embedder, bm25)
+    reranker = Reranker(config.rerank_model)
+    searcher = HybridSearcher(config, database, ing.vs, ing.embedder, bm25, reranker)
 
     app = FastAPI(title="WSnote", version="0.1.0")
     app.state.s = type("S", (), {

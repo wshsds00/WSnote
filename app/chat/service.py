@@ -1,6 +1,9 @@
+import logging
 from dataclasses import dataclass
 
 from app.retrieval.hybrid import HybridSearcher, RetrievalHit
+
+logger = logging.getLogger("wsnote.chat")
 
 
 @dataclass
@@ -42,6 +45,7 @@ class ChatService:
             messages = [{"role": "user", "content": _PROMPT.format(context=context, question=question)}]
             answer = self.llm.complete(messages)
             return ChatAnswer(answer=answer, citations=citations, degraded=False)
-        except Exception as e:
-            return ChatAnswer(answer=f"（LLM 调用失败，已降级为仅检索）{e}",
+        except Exception:
+            logger.exception("LLM 调用失败，已降级为仅检索")
+            return ChatAnswer(answer="（LLM 调用失败，已降级为仅检索）",
                               citations=citations, degraded=True)

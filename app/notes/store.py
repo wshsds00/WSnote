@@ -34,6 +34,8 @@ class NoteStore:
 
     def create(self, title: str, content: str, tags: list[str] | None = None) -> Note:
         note_id = _slug(title)
+        if self._path(note_id).exists():
+            raise FileExistsError(note_id)
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         note = Note(id=note_id, title=title, tags=tags or [], created=now, updated=now, content=content)
         self._write(note)
@@ -44,10 +46,13 @@ class NoteStore:
         if not p.exists():
             return None
         post = frontmatter.loads(p.read_text(encoding="utf-8"))
+        tags = post.get("tags", []) or []
+        if isinstance(tags, str):
+            tags = [tags]
         return Note(
             id=note_id,
             title=str(post.get("title", note_id)),
-            tags=list(post.get("tags", []) or []),
+            tags=list(tags),
             created=str(post.get("created", "")),
             updated=str(post.get("updated", "")),
             content=post.content,

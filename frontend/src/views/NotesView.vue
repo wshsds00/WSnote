@@ -31,18 +31,23 @@ onMounted(async () => { list.value = (await noteApi.list()).data.data })
 function createNote() {
   current.value = { title: '', content: '' }
   nextTick(async () => {
+    if (editor) editor.destroy()
     editor = new Vditor('editor', { value: '', height: 500 })
   })
 }
 async function open(id: string) {
   current.value = (await noteApi.get(id)).data.data
-  nextTick(() => { editor = new Vditor('editor', { value: current.value.content, height: 500 }) })
+  nextTick(() => {
+    if (editor) editor.destroy()
+    editor = new Vditor('editor', { value: current.value.content, height: 500 })
+  })
 }
 async function save() {
+  if (!editor) return
   const d = current.value
   if (!d.title) return
-  if (d.id) await noteApi.update(d.id, { title: d.title, content: editor.getValue(), tags: [] })
-  else await noteApi.create({ title: d.title, content: editor.getValue(), tags: [] })
+  if (d.id) await noteApi.update(d.id, { title: d.title, content: editor.getValue(), tags: d.tags ?? [] })
+  else await noteApi.create({ title: d.title, content: editor.getValue(), tags: d.tags ?? [] })
   list.value = (await noteApi.list()).data.data
 }
 </script>

@@ -2,6 +2,7 @@
 import argparse
 import json
 import sys
+import tempfile
 from dataclasses import replace
 from pathlib import Path
 
@@ -19,11 +20,21 @@ from app.ingest.ingestor import Ingestor
 
 def _make_searcher_factory(base_cfg):
     def factory(cfg_overrides):
-        cfg = replace(base_cfg, **cfg_overrides) if cfg_overrides else base_cfg
+        d = tempfile.mkdtemp(prefix="wsnote-eval-")
+        cfg = replace(base_cfg, **cfg_overrides) if cfg_overrides else replace(base_cfg)
+        # replace() 不会重跑 __post_init__，需显式指向临时 data_dir 并重派生路径
+        cfg.data_dir = Path(d) / "data"
+        cfg.notes_dir = base_cfg.notes_dir  # 复用同一批笔记
+        cfg.db_path = cfg.data_dir / "wsnote.db"
+        cfg.faiss_path = cfg.data_dir / "index.faiss"
+        ns = NoteStore(cfg)
         db = Database(cfg.db_path); db.init()
         emb = build_embedder(cfg)
         vs = VectorStore(cfg, db, emb)
-        vs.load() if cfg.faiss_path.exists() else vs.reset()
+        vs.reset()
+        ing = Ingestor(cfg, ns, db, emb, vs)
+        for note in ns.iter_all():
+            ing.index_note(note.id)
         bm25 = BM25Index(); bm25.build(db.all_chunks())
         return HybridSearcher(cfg, db, vs, emb, bm25)
     return factory
@@ -46,8 +57,10 @@ def main():
     cfg = get_config()
     ns = NoteStore(cfg); db = Database(cfg.db_path); db.init()
     emb = build_embedder(cfg); vs = VectorStore(cfg, db, emb)
-    vs.load() if cfg.faiss_path.exists() else vs.reset()
+    vs.load_or_reset()
     ing = Ingestor(cfg, ns, db, emb, vs)
+    if len(db.all_chunks()) > 0 and vs.count() == 0:
+        ing.rebuild_all()
     bm25 = BM25Index(); bm25.build(db.all_chunks())
     searcher = HybridSearcher(cfg, db, vs, emb, bm25)
 

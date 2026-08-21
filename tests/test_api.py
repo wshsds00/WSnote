@@ -42,3 +42,20 @@ def test_update_missing_note_404():
     c = make_client()
     r = c.put("/api/notes/missing", json={"title": "x", "content": "y"})
     assert r.status_code == 404
+
+
+def test_create_duplicate_slug_409():
+    c = make_client()
+    r1 = c.post("/api/notes", json={"title": "JVM 内存", "content": "x"})
+    assert r1.status_code == 200
+    r2 = c.post("/api/notes", json={"title": "JVM 内存", "content": "y"})
+    assert r2.status_code == 409
+
+
+def test_put_omitting_tags_preserves_existing():
+    c = make_client()
+    r = c.post("/api/notes", json={"title": "带标签", "content": "x", "tags": ["JVM"]})
+    note_id = r.json()["data"]["id"]
+    u = c.put(f"/api/notes/{note_id}", json={"title": "带标签", "content": "y"})
+    assert u.status_code == 200
+    assert u.json()["data"]["tags"] == ["JVM"]

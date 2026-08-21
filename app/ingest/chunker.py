@@ -42,9 +42,10 @@ def _char_chunks(text: str, size: int, overlap: int) -> list[str]:
         return [text]
     out = []
     i = 0
+    step = max(1, size - overlap)
     while i < len(text):
         out.append(text[i:i + size])
-        i += size - overlap
+        i += step
     return out
 
 

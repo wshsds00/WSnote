@@ -23,16 +23,24 @@ def rrf_fuse(rankings: list[list[str]], k: int = 60) -> dict[str, float]:
     return scores
 
 
+# 置于 RetrievalHit 之后导入：rerank.py 依赖本模块的 RetrievalHit，若在顶部导入会形成循环导入。
+from app.retrieval.rerank import Reranker  # noqa: E402
+
+
 class HybridSearcher:
     def __init__(self, config: Config, db: Database, vector_store: VectorStore,
-                 embedder, bm25: BM25Index):
+                 embedder, bm25: BM25Index, reranker: Reranker | None = None):
         self.config = config
         self.db = db
         self.vs = vector_store
         self.embedder = embedder
         self.bm25 = bm25
+        self.reranker = reranker
 
     def search(self, query: str, k: int = 5, use_rerank: bool = False) -> list[RetrievalHit]:
+        if use_rerank and self.reranker is not None:
+            candidates = self.search(query, k * 3, use_rerank=False)
+            return self.reranker.rerank(query, candidates, k)
         dense_hits = self.vs.search(self.embedder.embed([query])[0], k * 3)
         sparse_hits = self.bm25.search(query, k * 3)
         fused = rrf_fuse([dense_hits and [c for c, _ in dense_hits] or [],

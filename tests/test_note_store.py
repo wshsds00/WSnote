@@ -1,7 +1,10 @@
-from app.core.config import Config
-from app.notes.store import NoteStore
 import tempfile
 from pathlib import Path
+
+import pytest
+
+from app.core.config import Config
+from app.notes.store import NoteStore
 
 
 def make_store():
@@ -38,3 +41,20 @@ def test_frontmatter_roundtrip():
     n = store.create("带标签", "# 标题\n正文", tags=["JVM", "面试"])
     reloaded = store.read(n.id)
     assert reloaded.tags == ["JVM", "面试"]
+
+
+def test_create_slug_collision_raises():
+    store, _ = make_store()
+    store.create("Spring-Boot", "已有内容")
+    with pytest.raises(FileExistsError):
+        store.create("Spring Boot", "新内容")
+
+
+def test_read_scalar_tag_coerced_to_list():
+    store, _ = make_store()
+    store.create("标量标签", "正文")
+    # 手写 YAML 把 tags 写成标量，read 应把字符串规整为单元素列表
+    (store._path("标量标签")).write_text(
+        "---\ntitle: 标量标签\ntags: JVM\n---\n正文\n", encoding="utf-8")
+    note = store.read("标量标签")
+    assert note.tags == ["JVM"]

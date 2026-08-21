@@ -7,7 +7,7 @@ router = APIRouter(prefix="/api/notes", tags=["notes"])
 class NoteIn(BaseModel):
     title: str
     content: str = ""
-    tags: list[str] = []
+    tags: list[str] | None = None
 
 
 def _resp(data):
@@ -23,7 +23,10 @@ def list_notes(request: Request):
 @router.post("")
 def create_note(body: NoteIn, request: Request):
     s = request.app.state.s
-    note = s.note_store.create(body.title, body.content, body.tags)
+    try:
+        note = s.note_store.create(body.title, body.content, body.tags or [])
+    except FileExistsError:
+        raise HTTPException(409, "note exists")
     s.ingestor.index_note(note.id)
     return _resp(note.__dict__)
 

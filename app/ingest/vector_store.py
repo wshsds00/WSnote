@@ -144,6 +144,12 @@ class VectorStore:
         self._sync_from_db()
         self._loaded = True
 
+    def load_or_reset(self) -> None:
+        if self.config.faiss_path.exists() or self.config.faiss_path.with_suffix(".np.json").exists():
+            self.load()
+        else:
+            self.reset()
+
     def reset(self) -> None:
         self.index = faiss.IndexIDMap(faiss.IndexFlatIP(self.embedder.dim)) if _HAS_FAISS else _NumpyIndex(self.embedder.dim)
         self._id_to_chunk = {}

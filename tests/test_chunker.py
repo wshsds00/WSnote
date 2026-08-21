@@ -1,4 +1,4 @@
-from app.ingest.chunker import split_note
+from app.ingest.chunker import _char_chunks, split_note
 from app.notes.models import Note
 
 
@@ -23,3 +23,17 @@ def test_empty_and_small():
     assert split_note(Note(id="a", title="a", content="", created="", updated=""), 100, 10) == []
     one = split_note(Note(id="b", title="b", content="短", created="", updated=""), 100, 10)
     assert len(one) == 1 and one[0].text == "短"
+
+
+def test_char_chunks_terminates_when_overlap_ge_size():
+    # overlap >= chunk_size 时步长 ≤ 0 会导致死循环（回归测试）
+    pieces = _char_chunks("字" * 200, 50, 50)
+    assert len(pieces) > 0
+    assert all(len(p) <= 50 for p in pieces)
+
+
+def test_split_note_terminates_when_overlap_ge_size():
+    note = Note(id="n1", title="n1", content="字" * 200, created="", updated="")
+    chunks = split_note(note, chunk_size=50, overlap=50)
+    assert len(chunks) > 0
+    assert all(len(c.text) <= 50 for c in chunks)
