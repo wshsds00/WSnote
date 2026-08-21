@@ -1,9 +1,13 @@
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from app.core.config import Config
 from app.core.db import Database
 from app.ingest.vector_store import VectorStore
 from app.retrieval.bm25 import BM25Index
+
+if TYPE_CHECKING:
+    from app.retrieval.rerank import Reranker  # 仅在类型检查时导入，避免与 rerank.py 的循环依赖
 
 
 @dataclass
@@ -23,13 +27,9 @@ def rrf_fuse(rankings: list[list[str]], k: int = 60) -> dict[str, float]:
     return scores
 
 
-# 置于 RetrievalHit 之后导入：rerank.py 依赖本模块的 RetrievalHit，若在顶部导入会形成循环导入。
-from app.retrieval.rerank import Reranker  # noqa: E402
-
-
 class HybridSearcher:
     def __init__(self, config: Config, db: Database, vector_store: VectorStore,
-                 embedder, bm25: BM25Index, reranker: Reranker | None = None):
+                 embedder, bm25: BM25Index, reranker: "Reranker | None" = None):
         self.config = config
         self.db = db
         self.vs = vector_store
