@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+import argparse
+import json
+import sys
+from dataclasses import replace
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from app.core.config import get_config
+from app.core.db import Database
+from app.core.embeddings import build_embedder
+from app.ingest.vector_store import VectorStore
+from app.notes.store import NoteStore
+from app.retrieval.bm25 import BM25Index
+from app.retrieval.hybrid import HybridSearcher
+from app.ingest.ingestor import Ingestor
+
+
+def _make_searcher_factory(base_cfg):
+    def factory(cfg_overrides):
+        cfg = replace(base_cfg, **cfg_overrides) if cfg_overrides else base_cfg
+        db = Database(cfg.db_path); db.init()
+        emb = build_embedder(cfg)
+        vs = VectorStore(cfg, db, emb)
+        vs.load() if cfg.faiss_path.exists() else vs.reset()
+        bm25 = BM25Index(); bm25.build(db.all_chunks())
+        return HybridSearcher(cfg, db, vs, emb, bm25)
+    return factory
+
+
+def main():
+    p = argparse.ArgumentParser(prog="ws")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    ingest = sub.add_parser("ingest"); ingest.add_argument("--rebuild", action="store_true")
+    sp = sub.add_parser("search")
+    sp.add_argument("q")
+    sp.add_argument("-k", type=int, default=5)
+    sub.add_parser("status")
+    sp_e = sub.add_parser("eval")
+    sp_e.add_argument("--golden", default="eval/golden.json")
+    sp_e.add_argument("--configs", default='[{"chunk_size":512}]')
+
+    args = p.parse_args()
+    cfg = get_config()
+    ns = NoteStore(cfg); db = Database(cfg.db_path); db.init()
+    emb = build_embedder(cfg); vs = VectorStore(cfg, db, emb)
+    vs.load() if cfg.faiss_path.exists() else vs.reset()
+    ing = Ingestor(cfg, ns, db, emb, vs)
+    bm25 = BM25Index(); bm25.build(db.all_chunks())
+    searcher = HybridSearcher(cfg, db, vs, emb, bm25)
+
+    if args.cmd == "ingest":
+        if args.rebuild:
+            print(ing.rebuild_all())
+        else:
+            n = 0
+            for note in ns.iter_all():
+                n += ing.index_note(note.id)
+            print({"indexed": n})
+    elif args.cmd == "search":
+        for h in searcher.search(args.q, k=args.k):
+            print(f"{h.score:.3f}  {h.note_id}##{h.heading_path}\n   {h.text[:60]}")
+    elif args.cmd == "status":
+        print(json.dumps(ing.status(), ensure_ascii=False))
+    elif args.cmd == "eval":
+        from app.eval.runner import run_eval, build_report
+        configs = json.loads(args.configs)
+        results = run_eval(_make_searcher_factory(cfg), args.golden, configs)
+        print(build_report(results))
+
+
+if __name__ == "__main__":
+    main()
