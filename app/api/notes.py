@@ -40,6 +40,8 @@ def get_note(note_id: str, request: Request):
 @router.put("/{note_id}")
 def update_note(note_id: str, body: NoteIn, request: Request):
     s = request.app.state.s
+    if s.note_store.read(note_id) is None:
+        raise HTTPException(404, "note not found")
     note = s.note_store.update(note_id, body.content, body.tags)
     s.ingestor.index_note(note_id)
     return _resp(note.__dict__)

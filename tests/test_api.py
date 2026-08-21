@@ -14,6 +14,7 @@ from pathlib import Path
 def make_client():
     d = tempfile.mkdtemp()
     cfg = Config(root_dir=Path(d), notes_dir=Path(d) / "notes", data_dir=Path(d) / "data")
+    cfg.embedding_model = "__missing_model__"
     ns = NoteStore(cfg)
     db = Database(cfg.db_path); db.init()
     emb = FakeEmbedder(dim=8)
@@ -35,3 +36,9 @@ def test_note_crud_and_search_and_chat():
     assert "degraded" in ch.json()["data"]
     tags = c.get("/api/tags")
     assert tags.status_code == 200
+
+
+def test_update_missing_note_404():
+    c = make_client()
+    r = c.put("/api/notes/missing", json={"title": "x", "content": "y"})
+    assert r.status_code == 404
