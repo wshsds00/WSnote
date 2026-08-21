@@ -1,0 +1,37 @@
+from fastapi.testclient import TestClient
+from app.main import create_app
+from app.core.config import Config
+from app.core.db import Database
+from app.core.embeddings import FakeEmbedder
+from app.core.llm import FakeLLM
+from app.notes.store import NoteStore
+from app.ingest.vector_store import VectorStore
+from app.ingest.ingestor import Ingestor
+import tempfile
+from pathlib import Path
+
+
+def make_client():
+    d = tempfile.mkdtemp()
+    cfg = Config(root_dir=Path(d), notes_dir=Path(d) / "notes", data_dir=Path(d) / "data")
+    ns = NoteStore(cfg)
+    db = Database(cfg.db_path); db.init()
+    emb = FakeEmbedder(dim=8)
+    vs = VectorStore(cfg, db, emb); vs.reset()
+    ing = Ingestor(cfg, ns, db, emb, vs)
+    app = create_app(cfg, ns, db, ing, FakeLLM())
+    return TestClient(app)
+
+
+def test_note_crud_and_search_and_chat():
+    c = make_client()
+    r = c.post("/api/notes", json={"title": "JVM 内存", "content": "# 内存\n堆和栈 垃圾回收"})
+    assert r.status_code == 200 and r.json()["data"]["id"] == "JVM-内存"
+    c.post("/api/index/rebuild")
+    s = c.get("/api/search", params={"q": "垃圾回收"})
+    assert s.status_code == 200 and s.json()["data"]["hits"]
+    ch = c.post("/api/chat", json={"question": "垃圾回收是什么"})
+    assert ch.status_code == 200
+    assert "degraded" in ch.json()["data"]
+    tags = c.get("/api/tags")
+    assert tags.status_code == 200
