@@ -1,0 +1,29 @@
+{
+  "description": "WSnote 检索质量评测集（初始）",
+  "queries": [
+    {"q": "JVM 内存模型和垃圾回收的关系", "relevant_chunk_keys": ["JVM-内存##JVM内存模型", "JVM-内存##JVM内存模型 ## 垃圾回收"]},
+    {"q": "Redis 缓存过期策略有哪些", "relevant_chunk_keys": ["Redis-缓存##过期策略"]},
+    {"q": "为什么用向量检索", "relevant_chunk_keys": ["RAG-检索##向量检索"]},
+    {"q": "Spring Boot 自动装配原理", "relevant_chunk_keys": ["Spring-Boot##自动装配"]},
+    {"q": "TCP 三次握手四次挥手", "relevant_chunk_keys": ["TCP-连接##三次握手", "TCP-连接##三次握手 ## 四次挥手"]},
+    {"q": "如何评估 RAG 检索效果", "relevant_chunk_keys": ["检索质量评测##评测方法"]},
+    {"q": "堆和栈的区别", "relevant_chunk_keys": ["JVM-内存##JVM内存模型 ## 垃圾回收 ## 堆与栈"]},
+    {"q": "缓存穿透和缓存击穿怎么解决", "relevant_chunk_keys": ["Redis-缓存##过期策略 ## 缓存穿透击穿雪崩"]},
+    {"q": "什么是向量化 embedding", "relevant_chunk_keys": ["RAG-检索##向量检索 ## 向量化"]},
+    {"q": "混合检索如何融合 BM25 和向量", "relevant_chunk_keys": ["RAG-检索##向量检索 ## 向量化 ## 混合检索"]},
+    {"q": "什么是 recall 和 MRR 指标", "relevant_chunk_keys": ["检索质量评测##评测方法 ## 评测指标"]},
+    {"q": "Redis 持久化 RDB 和 AOF", "relevant_chunk_keys": ["Redis-缓存##过期策略 ## 缓存穿透击穿雪崩 ## 持久化"]},
+    {"q": "JVM 新生代和老年代", "relevant_chunk_keys": ["JVM-内存##JVM内存模型 ## 垃圾回收 ## 堆与栈"]},
+    {"q": "Spring Boot 启动流程", "relevant_chunk_keys": ["Spring-Boot##自动装配 ## 启动流程"]},
+    {"q": "TCP 为什么要三次握手", "relevant_chunk_keys": ["TCP-连接##三次握手"]},
+    {"q": "四次挥手的过程", "relevant_chunk_keys": ["TCP-连接##三次握手 ## 四次挥手"]},
+    {"q": "垃圾回收有哪些收集器", "relevant_chunk_keys": ["JVM-内存##JVM内存模型 ## 垃圾回收"]},
+    {"q": "FAISS 向量库怎么用", "relevant_chunk_keys": ["Embedding-与向量库##向量库"]},
+    {"q": "中文 embedding 模型推荐", "relevant_chunk_keys": ["Embedding-与向量库##向量库 ## bge 模型"]},
+    {"q": "向量检索和关键词检索的区别", "relevant_chunk_keys": ["RAG-检索##向量检索"]},
+    {"q": "缓存雪崩如何预防", "relevant_chunk_keys": ["Redis-缓存##过期策略 ## 缓存穿透击穿雪崩"]},
+    {"q": "可达性分析判断对象存活", "relevant_chunk_keys": ["JVM-内存##JVM内存模型 ## 垃圾回收"]},
+    {"q": "评测集怎么构建", "relevant_chunk_keys": ["检索质量评测##评测方法"]},
+    {"q": "内嵌 Tomcat 是做什么的", "relevant_chunk_keys": ["Spring-Boot##自动装配 ## 启动流程"]}
+  ]
+}
