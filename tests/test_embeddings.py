@@ -20,6 +20,14 @@ def test_fake_distinguishes_texts():
     assert a != b
 
 
+def test_fake_honors_dim_above_hash_size():
+    # sha256 摘要只有 32 字节，dim > 32 时必须仍返回正确维度（如默认 512）
+    emb = FakeEmbedder(dim=512)
+    v = emb.embed(["hello"])[0]
+    assert len(v) == 512
+    assert emb.embed(["hello"]) == emb.embed(["hello"])
+
+
 def test_build_embedder_offline_returns_fake():
     cfg = Config()
     cfg.embedding_model = "__missing_model__"

@@ -21,7 +21,8 @@ class FakeEmbedder:
         out = []
         for t in texts:
             h = hashlib.sha256(t.encode("utf-8")).digest()
-            v = [float(b / 255.0) for b in h[: self.dim]]
+            # sha256 摘要仅 32 字节，dim > 32 时循环取字节以保持正确维度
+            v = [float(h[i % len(h)] / 255.0) for i in range(self.dim)]
             out.append(v)
         return out
 
