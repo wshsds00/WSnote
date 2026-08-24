@@ -54,9 +54,21 @@ uvicorn app.main:app --port 8000
 
 访问 <http://127.0.0.1:8000/api/notes> 应返回 `{"code":0,"data":[...]}`。
 
-> **LLM key 可选**：未配置时问答自动降级为「仅检索」（返回命中块 + 引用，`degraded:true`），不阻塞其余功能。
-> **embedding 模型三级降级**：① 本地 ONNX 模型（`models/bge-small-zh-v1.5/`，离线可用，`onnxruntime`+`tokenizers` 直接推理，无需 PyTorch）→ ② 在线 `sentence-transformers`（联网自动下载）→ ③ FakeEmbedder（确定性假向量，零依赖兜底）。检索始终可用，仅质量随降级下降。
-> 配置项在 `app/core/config.py` 的 `Config` 默认值中修改（`llm_api_key` / `llm_base_url` / `llm_model` / `embedding_local_path` 等）。
+### 配置 LLM(可选,不配则问答降级为「仅检索」)
+
+不配置任何东西就能跑:问答页返回命中块 + 引用并提示 `degraded:true`,不阻塞其他功能。想让问答**真正生成回答**,通过环境变量配置(推荐,key 不进 git):
+
+| 环境变量 | 说明 | 示例 |
+|---|---|---|
+| `WSNOTE_LLM_API_KEY` | API key(必填) | `sk-xxx` |
+| `WSNOTE_LLM_BASE_URL` | OpenAI 兼容端点(缺省 `https://api.deepseek.com`) | `https://token-plan-cn.xiaomimimo.com/v1` |
+| `WSNOTE_LLM_MODEL` | 模型名(缺省 `deepseek-chat`) | `mimo-v2.5` |
+| `WSNOTE_LLM_TIMEOUT` | 请求超时秒(缺省 20) | `30` |
+
+> 环境变量优先于 `app/core/config.py` 的 `Config` 默认值(`llm_api_key` / `llm_base_url` / `llm_model` / `llm_timeout`),两种方式皆可,OpenAI 兼容协议,适配 DeepSeek / GLM / MiMo / Ollama 等。
+> PyCharm:`Run → Edit Configurations → 运行配置 → Environment variables` 里添加对应行。
+
+**embedding 模型三级降级**:① 本地 ONNX 模型(`models/bge-small-zh-v1.5/`,离线可用,`onnxruntime`+`tokenizers` 直接推理,无需 PyTorch)→ ② 在线 `sentence-transformers`(联网自动下载)→ ③ FakeEmbedder(确定性假向量,零依赖兜底)。检索始终可用,仅质量随降级下降。
 
 ### 前端
 
