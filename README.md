@@ -55,8 +55,8 @@ uvicorn app.main:app --port 8000
 访问 <http://127.0.0.1:8000/api/notes> 应返回 `{"code":0,"data":[...]}`。
 
 > **LLM key 可选**：未配置时问答自动降级为「仅检索」（返回命中块 + 引用，`degraded:true`），不阻塞其余功能。
-> **embedding 模型可选**：离线 / 缺模型时自动降级为 FakeEmbedder（确定性假向量），检索仍可用。
-> 配置项在 `app/core/config.py` 的 `Config` 默认值中修改（`llm_api_key` / `llm_base_url` / `llm_model` 等）。
+> **embedding 模型三级降级**：① 本地 ONNX 模型（`models/bge-small-zh-v1.5/`，离线可用，`onnxruntime`+`tokenizers` 直接推理，无需 PyTorch）→ ② 在线 `sentence-transformers`（联网自动下载）→ ③ FakeEmbedder（确定性假向量，零依赖兜底）。检索始终可用，仅质量随降级下降。
+> 配置项在 `app/core/config.py` 的 `Config` 默认值中修改（`llm_api_key` / `llm_base_url` / `llm_model` / `embedding_local_path` 等）。
 
 ### 前端
 
@@ -86,10 +86,10 @@ python scripts/ws eval --golden eval/golden.json --configs '[{"chunk_size":512}]
 
 | 配置 | recall@5 | recall@10 | mrr@5 | mrr@10 | ndcg@5 | ndcg@10 |
 |---|---|---|---|---|---|---|
-| chunk_size=512 | 0.9375 | 1.0 | 0.5028 | 0.5097 | 0.599 | 0.6229 |
+| chunk_size=512 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 | 1.0 |
 ```
 
-> 该报告在「无 sentence-transformers、embedding 降级 FakeEmbedder」的确定性环境下运行，BM25 稀疏检索命中查询词。
+> 该报告使用本地 ONNX 版 `bge-small-zh-v1.5`（离线语义向量）。对比 embedding 降级为 FakeEmbedder 时（`recall@5 0.9375 / mrr@5 0.5028`），真实语义向量让检索达到满分。
 
 ## 目录速览
 

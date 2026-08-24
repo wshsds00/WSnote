@@ -12,6 +12,7 @@ class Config:
     db_path: Path | None = None
     faiss_path: Path | None = None
     embedding_model: str = "BAAI/bge-small-zh-v1.5"
+    embedding_local_path: Path | None = PROJECT_ROOT / "models" / "bge-small-zh-v1.5"
     embedding_dim: int = 512
     chunk_size: int = 512
     chunk_overlap: int = 64
