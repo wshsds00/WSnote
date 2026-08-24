@@ -8,6 +8,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Windows 控制台代码页加固：stdout/stderr 统一 UTF-8，避免 GBK 终端下中文乱码
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 from app.core.config import get_config
 from app.core.db import Database
 from app.core.embeddings import build_embedder

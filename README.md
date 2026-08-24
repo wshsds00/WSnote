@@ -89,6 +89,8 @@ python scripts/ws search "关键词" -k 5   # 混合检索
 python scripts/ws eval --golden eval/golden.json --configs '[{"chunk_size":512}]'
 ```
 
+> **Windows 终端中文乱码？** 数据层与 API 全部显式 UTF-8，乱码只出现在终端显示：CLI 已强制 stdout UTF-8（Git Bash / PyCharm 终端 / Windows Terminal 直接正常）；若用传统 cmd，先 `chcp 65001` 或在环境变量设 `PYTHONUTF8=1` 即可。
+
 ## 评测报告
 
 评测集 `eval/golden.json`（24 条中文查询，标注相关块），运行 `python scripts/ws eval` 输出 Markdown 对比报告。本仓库当前实测：
