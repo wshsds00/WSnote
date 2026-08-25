@@ -1,3 +1,7 @@
+import json
+import tempfile
+from pathlib import Path
+
 from fastapi.testclient import TestClient
 from app.main import create_app
 from app.core.config import Config
@@ -7,8 +11,6 @@ from app.core.llm import FakeLLM
 from app.notes.store import NoteStore
 from app.ingest.vector_store import VectorStore
 from app.ingest.ingestor import Ingestor
-import tempfile
-from pathlib import Path
 
 
 def make_client():
@@ -36,6 +38,28 @@ def test_note_crud_and_search_and_chat():
     assert "degraded" in ch.json()["data"]
     tags = c.get("/api/tags")
     assert tags.status_code == 200
+
+
+def _parse_sse(text: str) -> list[dict]:
+    events = []
+    for block in text.strip().split("\n\n"):
+        for line in block.splitlines():
+            if line.startswith("data:"):
+                events.append(json.loads(line[len("data:"):].strip()))
+    return events
+
+
+def test_chat_stream_streams_with_llm():
+    c = make_client()
+    r = c.post("/api/chat/stream", json={"question": "垃圾回收是什么"})
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("text/event-stream")
+    events = _parse_sse(r.text)
+    metas = [e for e in events if e["type"] == "meta"]
+    deltas = "".join(e["content"] for e in events if e["type"] == "delta")
+    assert metas and metas[0]["degraded"] is False
+    assert deltas.strip()
+    assert events[-1]["type"] == "done"
 
 
 def test_update_missing_note_404():

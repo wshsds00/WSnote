@@ -10,13 +10,16 @@ WSnote 是一个「clone 即跑」的本地知识库，核心能力：
 - **混合检索**：BM25 稀疏检索 + 稠密向量检索，RRF 融合，可选 rerank 重排，返回带来源（笔记 + 小节）的命中块。
 - **RAG 问答**：命中块 + LLM 生成回答，回答携带引用（笔记路径 + 小节标题）；无 LLM key 时自动降级为「仅检索」。
 - **内置评测 harness**：golden 查询集 + recall@k / MRR / nDCG 指标 + 配置对比报告，检索质量可量化、可回归。
+- **文稿导入**：批量导入长文本（粘贴或 `.txt` / `.md` 文件，兼容 Windows GBK 编码），整篇入库或按一级标题拆成多篇，导入即增量索引。
+- **AI 整理**：把录音文字稿 / 长文档用 LLM 整理成结构化笔记（面试复盘 / 通用整理 / 会议纪要三种预设），预览后一键存为笔记。
 - **降级可靠**：无 LLM key、无 embedding 模型、无 FAISS 时均可用（自动降级，HTTP 200 而非 500）。
 
-前端三视图：
+前端四视图：
 
-- **笔记（`/`）**：左侧笔记列表（标题搜索 + 标签），右侧 vditor Markdown 编辑器，保存即触发增量索引。
-- **搜索（`/search`）**：输入检索词，返回命中块，展示来源笔记、小节与相似度得分。
+- **笔记（`/`）**：左侧笔记列表（标题搜索 + 标签 + 一键导入），右侧 vditor Markdown 编辑器，保存即触发增量索引。
+- **搜索（`/search`）**：输入检索词，返回命中块，展示来源笔记、小节与相似度得分，关键词高亮、点击跳转原文。
 - **问答（`/chat`）**：聊天式提问，回答下方折叠展示引用（可定位到笔记对应小节）；未配置 LLM 时显示降级提示。
+- **整理（`/process`）**：粘贴文字稿或上传文件，选整理方式（面试整理 / 通用整理 / 会议纪要）→ LLM 整理成结构化 Markdown → 预览后「保存为笔记」。
 
 ## 架构
 
@@ -118,15 +121,16 @@ WSnote/
 ├── scripts/ws              # CLI 入口（ingest / search / status / eval）
 ├── app/
 │   ├── main.py             # FastAPI 入口
-│   ├── api/                # notes / search / chat / tags / index
+│   ├── api/                # notes / search / chat / tags / index / process
 │   ├── core/               # config / db / embeddings / llm 抽象
 │   ├── notes/              # 笔记 CRUD（frontmatter）
 │   ├── ingest/             # 分块 + embedding + 向量库
 │   ├── retrieval/          # BM25 + 混合检索 + rerank
 │   ├── chat/               # RAG 问答（引用 + 降级）
+│   ├── process/            # 文稿导入 + AI 整理（NoteProcessor）
 │   └── eval/               # 指标 + 评测 runner
 ├── frontend/               # Vue3 + Vite + Element Plus + vditor
-└── tests/                  # pytest（39 个用例）
+└── tests/                  # pytest（56 个用例）
 ```
 
 > `data/`（SQLite + FAISS 索引）已 git-ignore：索引可随时从 `notes/` 重建，`notes/` 示例笔记随仓库提交。
@@ -138,7 +142,7 @@ pip install -e ".[dev]"   # 或 pip install pytest pytest-asyncio httpx
 pytest -q
 ```
 
-当前 39 个测试全部通过。
+当前 63 个测试全部通过。
 
 ## License
 

@@ -1,6 +1,7 @@
+import json
 import logging
 import os
-from typing import Protocol
+from typing import Iterator, Protocol
 
 import httpx
 
@@ -11,6 +12,7 @@ logger = logging.getLogger("wsnote.llm")
 
 class BaseLLM(Protocol):
     def complete(self, messages: list[dict]) -> str: ...
+    def complete_stream(self, messages: list[dict]) -> Iterator[str]: ...
     def available(self) -> bool: ...
 
 
@@ -18,6 +20,9 @@ class FakeLLM:
     def complete(self, messages: list[dict]) -> str:
         last = messages[-1]["content"] if messages else ""
         return f"（Fake 回复）针对「{last}」的摘要。"
+
+    def complete_stream(self, messages: list[dict]) -> Iterator[str]:
+        yield self.complete(messages)
 
     def available(self) -> bool:
         return True
@@ -42,6 +47,30 @@ class OpenAICompatLLM:
         )
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
+
+    def complete_stream(self, messages: list[dict]) -> Iterator[str]:
+        """OpenAI 兼容 SSE 流式补全，逐段产出增量文本。"""
+        with httpx.stream(
+            "POST",
+            f"{self.base_url}/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={"model": self.model, "messages": messages, "stream": True},
+            timeout=self.timeout,
+        ) as resp:
+            resp.raise_for_status()
+            for line in resp.iter_lines():
+                if not line or not line.startswith("data:"):
+                    continue
+                data = line[len("data:"):].strip()
+                if data == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data)
+                except json.JSONDecodeError:
+                    continue
+                delta = (chunk.get("choices") or [{}])[0].get("delta", {}).get("content")
+                if delta:
+                    yield delta
 
 
 def build_llm(config: Config) -> BaseLLM:

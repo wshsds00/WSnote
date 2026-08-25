@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import notes, search, chat, tags, index
+from app.api import notes, search, chat, tags, index, process
 from app.core.config import Config, get_config
 from app.core.db import Database
 from app.core.embeddings import build_embedder
@@ -43,6 +43,7 @@ def create_app(config: Config | None = None, note_store=None, db=None,
     app.include_router(chat.router)
     app.include_router(tags.router)
     app.include_router(index.router)
+    app.include_router(process.router)
     return app
 
 

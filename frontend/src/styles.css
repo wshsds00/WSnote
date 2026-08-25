@@ -1,0 +1,113 @@
+/* ============================================================
+   WSnote 全局设计系统
+   风格：Enterprise SaaS（indigo + slate），浅/深双主题
+   来源：ui-ux-pro-max 设计系统推荐
+   ============================================================ */
+:root {
+  --ws-bg: #f8fafc;
+  --ws-surface: #ffffff;
+  --ws-foreground: #0f172a;
+  --ws-muted: #64748b;
+  --ws-primary: #4f46e5;
+  --ws-primary-soft: rgba(79, 70, 229, 0.1);
+  --ws-border: #e2e8f0;
+  --ws-destructive: #dc2626;
+  --ws-radius: 10px;
+  --ws-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --ws-font: Inter, "PingFang SC", "Microsoft YaHei", "Noto Sans SC",
+    "Helvetica Neue", Arial, sans-serif;
+}
+
+html.dark {
+  --ws-bg: #0f172a;
+  --ws-surface: #1e293b;
+  --ws-foreground: #e2e8f0;
+  --ws-muted: #94a3b8;
+  --ws-primary: #818cf8;
+  --ws-primary-soft: rgba(129, 140, 248, 0.16);
+  --ws-border: #334155;
+  --ws-destructive: #f87171;
+  --ws-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: var(--ws-font);
+  background: var(--ws-bg);
+  color: var(--ws-foreground);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* 细滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ws-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ws-muted);
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 关键词高亮（搜索命中） */
+mark.hl {
+  background: rgba(79, 70, 229, 0.16);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+html.dark mark.hl {
+  background: rgba(129, 140, 248, 0.28);
+}
+
+/* 可点击元素统一手型 */
+.ws-clickable {
+  cursor: pointer;
+}
+
+/* 通用过渡 */
+.ws-fade-enter-active,
+.ws-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+.ws-fade-enter-from,
+.ws-fade-leave-to {
+  opacity: 0;
+}
+
+/* Element Plus 主色对齐到设计系统 */
+:root {
+  --el-color-primary: #4f46e5;
+  --el-color-primary-light-3: #818cf8;
+  --el-color-primary-light-5: #a5b4fc;
+  --el-color-primary-light-7: #c7d2fe;
+  --el-color-primary-light-8: #e0e7ff;
+  --el-color-primary-light-9: #eef2ff;
+  --el-color-primary-dark-2: #4338ca;
+}
+html.dark {
+  --el-color-primary: #818cf8;
+  --el-color-primary-light-3: #6366f1;
+  --el-color-primary-light-5: #4f46e5;
+  --el-color-primary-light-7: #4338ca;
+  --el-color-primary-light-8: #3730a3;
+  --el-color-primary-light-9: #312e81;
+  --el-color-primary-dark-2: #a5b4fc;
+}
