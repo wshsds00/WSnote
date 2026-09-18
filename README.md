@@ -12,6 +12,7 @@ WSnote 是一个「clone 即跑」的本地知识库，核心能力：
 - **内置评测 harness**：golden 查询集 + recall@k / MRR / nDCG 指标 + 配置对比报告，检索质量可量化、可回归。
 - **文稿导入**：批量导入长文本（粘贴或 `.txt` / `.md` 文件，兼容 Windows GBK 编码），整篇入库或按一级标题拆成多篇，导入即增量索引。
 - **AI 整理**：把录音文字稿 / 长文档用 LLM 整理成结构化笔记（面试复盘 / 通用整理 / 会议纪要三种预设），预览后一键存为笔记。
+- **音频转文字（ASR）**：上传音频文件（mp3/wav/m4a 等），本地 faster-whisper GPU 加速转写，或 fallback 到 MiMo API；支持「仅转写」和「转写并整理」两种模式。
 - **降级可靠**：无 LLM key、无 embedding 模型、无 FAISS 时均可用（自动降级，HTTP 200 而非 500）。
 
 前端四视图：
@@ -127,10 +128,11 @@ WSnote/
 │   ├── ingest/             # 分块 + embedding + 向量库
 │   ├── retrieval/          # BM25 + 混合检索 + rerank
 │   ├── chat/               # RAG 问答（引用 + 降级）
+│   ├── asr/                # ASR 语音转写（faster-whisper / MiMo API）
 │   ├── process/            # 文稿导入 + AI 整理（NoteProcessor）
 │   └── eval/               # 指标 + 评测 runner
 ├── frontend/               # Vue3 + Vite + Element Plus + vditor
-└── tests/                  # pytest（56 个用例）
+└── tests/                  # pytest（63 个用例）
 ```
 
 > `data/`（SQLite + FAISS 索引）已 git-ignore：索引可随时从 `notes/` 重建，`notes/` 示例笔记随仓库提交。
