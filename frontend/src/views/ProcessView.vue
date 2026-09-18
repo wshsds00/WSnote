@@ -4,24 +4,39 @@
     <aside class="input-pane">
       <div class="pane-head">
         <h2 class="pane-title">原始文稿</h2>
-        <el-button text type="primary" :icon="Upload" @click="fileInput?.click()">
-          {{ file ? file.name : '选择文件' }}
+        <el-button text type="primary" @click="fileInput?.click()">
+          选择文本文件
         </el-button>
       </div>
       <input
         ref="fileInput"
         type="file"
-        accept=".txt,.md"
+        accept=".txt,.md,.mp3,.wav,.m4a,.ogg,.webm,.flac"
         class="hidden-input"
         @change="onFile"
       />
+      <!-- 音频上传入口 -->
+      <div class="audio-upload" @click="audioInput?.click()">
+        <input
+          ref="audioInput"
+          type="file"
+          accept=".mp3,.wav,.m4a,.ogg,.webm,.flac"
+          class="hidden-input"
+          @change="onFile"
+        />
+        <div class="audio-upload-icon">🎙️</div>
+        <div class="audio-upload-text" v-if="!isAudio">上传音频转写</div>
+        <div class="audio-upload-text" v-else>{{ file?.name }}</div>
+        <div class="audio-upload-hint" v-if="!isAudio">支持 mp3 / wav / m4a / ogg / webm / flac</div>
+        <div class="audio-upload-hint" v-else>点击可重新选择音频文件</div>
+      </div>
 
       <el-input
         v-model="source"
         type="textarea"
         :rows="16"
         resize="none"
-        placeholder="粘贴面试录音文字稿、长文档或会议记录…（支持 .txt / .md 文件）"
+        placeholder="粘贴面试录音文字稿、长文档或会议记录…&#10;支持 .txt / .md 文件，或上传音频自动转写"
       />
 
       <div class="mode-row">
@@ -33,7 +48,31 @@
         </el-radio-group>
       </div>
 
+      <!-- 音频文件：两个入口 -->
+      <template v-if="isAudio">
+        <el-button
+          type="primary"
+          :loading="transcribing"
+          :icon="MagicStick"
+          class="run-btn"
+          @click="onTranscribeAndAnalyze"
+        >
+          {{ transcribing ? '转写中，请耐心等待…' : '转写并整理' }}
+        </el-button>
+        <el-button
+          :loading="transcribing"
+          class="run-btn"
+          @click="onTranscribeOnly"
+        >
+          {{ transcribing ? '转写中，请耐心等待…' : '仅转写' }}
+        </el-button>
+        <div v-if="transcribing" class="tip">
+          <p>本地模型首次加载较慢，较长音频可能需要数分钟…</p>
+        </div>
+      </template>
+      <!-- 文本文件：原有逻辑 -->
       <el-button
+        v-else
         type="primary"
         :loading="loading"
         :icon="MagicStick"
@@ -44,7 +83,7 @@
       </el-button>
 
       <div class="tip">
-        <p>提示：AI 整理需要已配置 LLM（环境变量 <code>WSNOTE_LLM_API_KEY</code>）。</p>
+        <p>提示：AI 整理需 LLM（<code>WSNOTE_LLM_API_KEY</code>）；音频转写优先使用本地 whisper，未安装时需 <code>WSNOTE_ASR_API_KEY</code>。</p>
       </div>
     </aside>
 
@@ -66,8 +105,13 @@
           show-icon
         />
 
+        <!-- 仅转写模式：复制/下载 -->
+        <div v-if="transcribeOnly && done" class="transcribe-actions">
+          <el-button @click="copyText">复制全文</el-button>
+          <el-button @click="downloadTxt">下载 .txt</el-button>
+        </div>
         <div class="result-head">
-          <div class="save-box">
+          <div v-if="!transcribeOnly" class="save-box">
             <el-input v-model="saveTitle" size="large" placeholder="笔记标题" class="save-title" />
             <el-select
               v-model="saveTags"
@@ -95,11 +139,11 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Vditor from 'vditor'
 import 'vditor/dist/index.css'
-import { Check, MagicStick, Upload } from '@element-plus/icons-vue'
+import { Check, MagicStick } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { noteApi, processApi } from '../api'
 import { useTheme } from '../composables/useTheme'
@@ -108,12 +152,17 @@ import { readFileText } from '../utils/file'
 const router = useRouter()
 const { isDark } = useTheme()
 
+const AUDIO_EXTS = new Set(['.mp3', '.wav', '.m4a', '.ogg', '.webm', '.flac'])
+
 const source = ref('')
 const mode = ref<'interview' | 'general' | 'meeting'>('interview')
 const file = ref<File | null>(null)
 const fileInput = ref<HTMLInputElement | null>(null)
+const audioInput = ref<HTMLInputElement | null>(null)
 const loading = ref(false)
 const saving = ref(false)
+const transcribing = ref(false)
+const transcribeOnly = ref(false)
 const started = ref(false)
 const markdown = ref('')
 const degraded = ref(false)
@@ -123,6 +172,12 @@ const saveTitle = ref('')
 const saveTags = ref<string[]>([])
 let preview: Vditor | null = null
 let flushTimer: number | null = null
+
+const isAudio = computed(() => {
+  if (!file.value) return false
+  const ext = file.value.name.slice(file.value.name.lastIndexOf('.')).toLowerCase()
+  return AUDIO_EXTS.has(ext)
+})
 
 const SUGGEST = {
   interview: '面试复盘',
@@ -136,14 +191,25 @@ function today(): string {
 }
 
 async function onFile(e: Event) {
-  const f = (e.target as HTMLInputElement).files?.[0]
+  const input = e.target as HTMLInputElement
+  const f = input.files?.[0]
   if (!f) return
   file.value = f
+  source.value = ''
+  transcribeOnly.value = false
+  started.value = false
+  done.value = false
+  const ext = f.name.slice(f.name.lastIndexOf('.')).toLowerCase()
+  if (AUDIO_EXTS.has(ext)) {
+    input.value = ''  // 清空以便重复选同一文件
+    return
+  }
   try {
     source.value = await readFileText(f)
   } catch {
     ElMessage.error('读取文件失败')
   }
+  input.value = ''
 }
 
 function destroyPreview() {
@@ -173,6 +239,41 @@ function schedulePreview() {
     flushTimer = null
     if (preview) preview.setValue(markdown.value)
   }, 120)
+}
+
+async function doTranscribe(): Promise<boolean> {
+  if (!file.value) return false
+  transcribing.value = true
+  try {
+    const { text } = await processApi.transcribeAudio(file.value)
+    source.value = text
+    return true
+  } catch (err: any) {
+    const msg = err?.response?.data?.detail || err?.message || '音频转写失败'
+    ElMessage.error(msg)
+    return false
+  } finally {
+    transcribing.value = false
+  }
+}
+
+async function onTranscribeOnly() {
+  const ok = await doTranscribe()
+  if (!ok) return
+  transcribeOnly.value = true
+  started.value = true
+  done.value = true
+  loading.value = false
+  // 仅转写模式：用 Vditor 渲染纯文本
+  markdown.value = source.value
+  await renderPreview(source.value)
+}
+
+async function onTranscribeAndAnalyze() {
+  const ok = await doTranscribe()
+  if (!ok) return
+  // 转写完成后自动触发整理
+  await onAnalyze()
 }
 
 async function onAnalyze() {
@@ -238,6 +339,25 @@ async function onSave() {
   }
 }
 
+async function copyText() {
+  try {
+    await navigator.clipboard.writeText(source.value)
+    ElMessage.success('已复制到剪贴板')
+  } catch {
+    ElMessage.error('复制失败，请手动选择复制')
+  }
+}
+
+function downloadTxt() {
+  const blob = new Blob([source.value], { type: 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = (file.value?.name?.replace(/\.[^.]+$/, '') || '转写结果') + '.txt'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 watch(isDark, (v) => {
   if (preview) preview.setTheme(v ? 'dark' : 'classic', v ? 'dark' : 'light')
 })
@@ -279,6 +399,32 @@ onBeforeUnmount(() => {
 }
 .hidden-input {
   display: none;
+}
+.audio-upload {
+  border: 2px dashed var(--ws-border);
+  border-radius: var(--ws-radius);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+}
+.audio-upload:hover {
+  border-color: var(--ws-primary);
+  background: var(--ws-primary-soft);
+}
+.audio-upload-icon {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+.audio-upload-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ws-text);
+}
+.audio-upload-hint {
+  font-size: 12px;
+  color: var(--ws-muted);
+  margin-top: 4px;
 }
 .mode-row {
   display: flex;
@@ -346,6 +492,11 @@ onBeforeUnmount(() => {
   margin-top: 8px;
   font-size: 12px;
   color: var(--ws-muted);
+}
+.transcribe-actions {
+  margin-bottom: 12px;
+  display: flex;
+  gap: 10px;
 }
 .preview-container {
   flex: 1;

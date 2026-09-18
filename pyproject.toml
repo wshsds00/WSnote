@@ -5,6 +5,7 @@ description = "本地优先的 Markdown 个人知识库（second brain）"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",
+    "python-multipart>=0.0.9",
     "uvicorn[standard]>=0.29",
     "pydantic>=2.6",
     "python-frontmatter>=1.1",

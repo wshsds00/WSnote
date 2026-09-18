@@ -27,6 +27,12 @@ class Config:
     llm_model: str = "deepseek-chat"
     llm_timeout: float = 20.0
 
+    # ASR 语音转写（MiMo，OpenAI 兼容）
+    asr_base_url: str = ""
+    asr_api_key: str = ""
+    asr_model: str = "mimo-v2.5-asr"
+    asr_timeout: float = 600.0
+
     def __post_init__(self) -> None:
         self.notes_dir.mkdir(parents=True, exist_ok=True)
         self.data_dir.mkdir(parents=True, exist_ok=True)

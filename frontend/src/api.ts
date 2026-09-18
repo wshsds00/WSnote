@@ -179,6 +179,16 @@ export interface AnalyzeStreamHandlers {
 export const processApi = {
   importText: async (d: { text: string; mode?: string; title?: string; tags?: string[] }): Promise<ImportResult> =>
     unwrap((await http.post('/process/import', d)).data),
+  // 音频转文字：上传音频文件，返回转写文本
+  transcribeAudio: async (file: File): Promise<{ text: string }> => {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await http.post('/process/transcribe', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 600_000,  // 音频转写可能较慢，10 分钟
+    })
+    return unwrap<{ text: string }>(res.data)
+  },
   // SSE 流式整理：后端逐段推送 delta，前端渐进渲染
   analyzeStream: async (d: { text: string; mode: string }, h: AnalyzeStreamHandlers = {}): Promise<void> => {
     let res: Response

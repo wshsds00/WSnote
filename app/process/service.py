@@ -74,12 +74,13 @@ _PROMPTS = {
 
 
 class NoteProcessor:
-    """文稿导入 + AI 整理。"""
+    """文稿导入 + AI 整理 + 音频转写。"""
 
-    def __init__(self, note_store, ingestor, llm):
+    def __init__(self, note_store, ingestor, llm, asr=None):
         self.note_store = note_store
         self.ingestor = ingestor
         self.llm = llm
+        self.asr = asr
 
     def _create_and_index(self, title: str, content: str, tags: list[str]) -> Note | None:
         """建一篇并索引；标题冲突返回 None（调用方记入 skipped）。"""
@@ -89,6 +90,12 @@ class NoteProcessor:
             return None
         self.ingestor.index_note(note.id)
         return note
+
+    def transcribe_audio(self, audio_bytes: bytes, filename: str) -> str:
+        """调用 ASR 转写音频，返回文字稿。"""
+        if not self.asr or not self.asr.available():
+            raise ValueError("ASR 未配置：请设置环境变量 WSNOTE_ASR_API_KEY")
+        return self.asr.transcribe(audio_bytes, filename)
 
     def import_text(self, text: str, mode: str = "single",
                     title: str = "", tags: list[str] | None = None) -> tuple[list[NoteMeta], list[str]]:

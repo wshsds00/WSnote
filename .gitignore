@@ -11,5 +11,6 @@ frontend/dist/
 .env
 # 个人面试复盘笔记，不随仓库公开
 notes/面试复盘*.md
+notes/后端-中间件面试突击日报*.md
 # 内部开发过程文档，不随仓库公开
 docs/superpowers/

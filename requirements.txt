@@ -1,5 +1,6 @@
 # 运行依赖（与 pyproject.toml 的 [project].dependencies 一致，供无 uv 用户使用）
 fastapi>=0.110
+python-multipart>=0.0.9
 uvicorn[standard]>=0.29
 pydantic>=2.6
 python-frontmatter>=1.1
@@ -16,3 +17,7 @@ tokenizers>=0.19
 # 可选：在线 sentence-transformers 路径（联网自动下载模型；未安装时
 # 有本地 ONNX 模型则用 ONNX，否则降级 FakeEmbedder，不阻塞使用）
 # sentence-transformers>=2.6
+
+# 可选：本地 ASR 语音转写（优先使用，未安装时 fallback 到 MiMo API）
+# faster-whisper>=1.0    # 推荐，速度最快
+# openai-whisper>=20231117  # 备选
